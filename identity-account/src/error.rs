@@ -12,6 +12,7 @@ pub enum Error {
   ActorSystemError(riker::system::SystemError),
   StrongholdError(iota_stronghold::Error),
   StrongholdResult(String),
+  InvalidResourceIndex,
   StrongholdPasswordNotSet,
   StrongholdProcedureFailure,
   StrongholdInvalidAddress,
@@ -30,6 +31,12 @@ impl From<identity_core::Error> for Error {
 impl From<identity_iota::Error> for Error {
   fn from(other: identity_iota::Error) -> Self {
     Self::IotaError(other)
+  }
+}
+
+impl From<crypto::Error> for Error {
+  fn from(other: crypto::Error) -> Self {
+    Self::CryptoError(other)
   }
 }
 

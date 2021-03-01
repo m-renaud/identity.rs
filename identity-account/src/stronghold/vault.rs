@@ -1,7 +1,7 @@
 // Copyright 2020-2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use std::path::PathBuf;
+use std::path::Path;
 use iota_stronghold::StrongholdFlags;
 use iota_stronghold::Location;
 use iota_stronghold::RecordHint;
@@ -20,19 +20,48 @@ use crate::stronghold::ProcedureResult;
 pub type Record = (usize, RecordHint);
 
 #[derive(Debug)]
-pub struct Vault {
-  pub(crate) flags: Vec<StrongholdFlags>,
-  pub(crate) name: Vec<u8>,
-  pub(crate) path: PathBuf,
+pub struct Vault<'path> {
+  flags: Vec<StrongholdFlags>,
+  name: Vec<u8>,
+  path: &'path Path,
 }
 
-impl Vault {
+impl<'path> Vault<'path> {
+  pub(crate) fn new<T>(path: &'path Path, name: &T, flags: &[StrongholdFlags]) -> Self
+  where
+    T: AsRef<[u8]> + ?Sized,
+  {
+    Self {
+      flags: flags.to_vec(),
+      name: name.as_ref().to_vec(),
+      path,
+    }
+  }
+}
+
+impl Vault<'_> {
+  pub fn name(&self) -> &[u8] {
+    &self.name
+  }
+
+  pub fn path(&self) -> &Path {
+    self.path
+  }
+
+  pub fn flags(&self) -> &[StrongholdFlags] {
+    &self.flags
+  }
+
+  pub async fn flush(&self) -> Result<()> {
+    Runtime::lock().await?.write_snapshot(self.path).await
+  }
+
   /// Inserts a record.
   pub async fn insert(&self, location: Location, payload: Vec<u8>, hint: RecordHint, flags: &[VaultFlags]) -> Result<()> {
     let mut runtime: _ = Runtime::lock().await?;
 
-    runtime.set_snapshot(&self.path).await?;
-    runtime.load_actor(&self.path, &self.name, &self.flags).await?;
+    runtime.set_snapshot(self.path).await?;
+    runtime.load_actor(self.path, &self.name, &self.flags).await?;
     runtime.write_to_vault(location, payload, hint, flags.to_vec()).await.to_result()?;
 
     Ok(())
@@ -42,8 +71,8 @@ impl Vault {
   pub async fn delete(&self, location: Location, gc: bool) -> Result<()> {
     let mut runtime: _ = Runtime::lock().await?;
 
-    runtime.set_snapshot(&self.path).await?;
-    runtime.load_actor(&self.path, &self.name, &self.flags).await?;
+    runtime.set_snapshot(self.path).await?;
+    runtime.load_actor(self.path, &self.name, &self.flags).await?;
     runtime.delete_data(location, gc).await.to_result()?;
 
     Ok(())
@@ -53,8 +82,8 @@ impl Vault {
   pub async fn execute(&self, procedure: Procedure) -> Result<ProcedureResult> {
     let mut runtime: _ = Runtime::lock().await?;
 
-    runtime.set_snapshot(&self.path).await?;
-    runtime.load_actor(&self.path, &self.name, &self.flags).await?;
+    runtime.set_snapshot(self.path).await?;
+    runtime.load_actor(self.path, &self.name, &self.flags).await?;
 
     runtime.runtime_exec(procedure).await.to_result()
   }
@@ -66,8 +95,8 @@ impl Vault {
   {
     let mut runtime: _ = Runtime::lock().await?;
 
-    runtime.set_snapshot(&self.path).await?;
-    runtime.load_actor(&self.path, &self.name, &self.flags).await?;
+    runtime.set_snapshot(self.path).await?;
+    runtime.load_actor(self.path, &self.name, &self.flags).await?;
 
     let (data, status): (Vec<Record>, _) = runtime
       .list_hints_and_ids(vault.as_ref())

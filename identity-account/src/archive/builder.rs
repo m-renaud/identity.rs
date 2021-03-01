@@ -8,10 +8,14 @@ use crate::archive::Archive;
 use crate::archive::ArchiveStorage;
 use crate::error::Error;
 use crate::error::Result;
-use crate::storage::StorageHandle;
+use crate::storage::StorageVault;
 use crate::storage::StorageAdapter;
 use crate::utils::EncryptionKey;
 use crate::utils::derive_encryption_key;
+use crate::storage::StrongholdAdapter;
+use crate::storage::VaultAdapter;
+use crate::storage::EncryptedStorage;
+use crate::utils::fs;
 
 const STORAGE: Option<ArchiveStorage> = Some(ArchiveStorage::Stronghold);
 const STORAGE_PATH: &str = "./storage";
@@ -20,7 +24,7 @@ const STORAGE_PATH: &str = "./storage";
 pub struct ArchiveBuilder {
   storage: Option<ArchiveStorage>,
   storage_path: PathBuf,
-  encryption_key: Option<EncryptionKey>,
+  storage_password: Option<EncryptionKey>,
 }
 
 impl ArchiveBuilder {
@@ -28,7 +32,7 @@ impl ArchiveBuilder {
     Self {
       storage: STORAGE,
       storage_path: STORAGE_PATH.into(),
-      encryption_key: None,
+      storage_password: None,
     }
   }
 
@@ -37,7 +41,7 @@ impl ArchiveBuilder {
     P: Into<Option<&'a str>>,
   {
     self.storage = storage.into();
-    self.encryption_key = password.into().map(derive_encryption_key);
+    self.storage_password = password.into().map(derive_encryption_key);
     self
   }
 
@@ -50,23 +54,26 @@ impl ArchiveBuilder {
   }
 
   pub async fn build(self) -> Result<Archive> {
-    let (adapter, path): (Box<dyn StorageAdapter>, PathBuf) = match self.storage {
-      Some(storage) => {
-        let path: PathBuf = storage.database_file(self.storage_path);
+    let adapter: Box<dyn VaultAdapter> = match self.storage {
+      Some(ArchiveStorage::Stronghold) => {
+        let path: PathBuf = fs::database_file(&self.storage_path, "identity.vault");
 
-        if !matches!(storage, ArchiveStorage::Custom(_)) {
-          ArchiveStorage::ensure_path(&path)?;
-        }
+        fs::ensure_directory(&path)?;
 
-        (storage.into_adapter(&path), path)
+        Box::new(StrongholdAdapter::new(&path, self.storage_password).await?)
+      }
+      Some(ArchiveStorage::Custom(adapter)) => {
+        Box::new(EncryptedStorage::new(adapter, self.storage_password))
       }
       None => {
         return Err(Error::MissingStorageAdapter);
       }
     };
 
-    let storage: StorageHandle = StorageHandle::new(adapter, path, self.encryption_key);
+    let storage: StorageVault = StorageVault::new(adapter);
     let archive: Archive = Archive::new(storage);
+
+    archive.initialize().await?;
 
     Ok(archive)
   }

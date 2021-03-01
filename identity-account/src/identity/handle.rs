@@ -9,8 +9,8 @@ use identity_core::common::Timestamp;
 use identity_iota::did::DID;
 use identity_iota::did::Document;
 
-use crate::storage::StorageHandle;
 use crate::identity::Identity;
+use crate::storage::StorageVault;
 
 #[derive(Clone, Debug)]
 pub struct IdentityHandle {
@@ -22,6 +22,10 @@ impl IdentityHandle {
     Self {
       data: Arc::new(RwLock::new(data)),
     }
+  }
+
+  pub async fn into_inner(&self) -> Identity {
+    self.data.read().await.clone()
   }
 
   pub async fn id(&self) -> DID {
@@ -56,8 +60,8 @@ impl IdentityHandle {
     self.data.read().await.document.clone()
   }
 
-  pub(crate) async fn storage(&self) -> StorageHandle {
-    self.data.read().await.storage.clone()
+  pub(crate) async fn vault(&self) -> StorageVault {
+    self.data.read().await.vault.clone()
   }
 
   pub(crate) async fn read(&self) -> RwLockReadGuard<'_, Identity> {

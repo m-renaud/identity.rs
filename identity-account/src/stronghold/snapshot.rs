@@ -11,6 +11,7 @@ use crate::stronghold::Store;
 use crate::stronghold::Vault;
 use crate::stronghold::Password;
 use crate::stronghold::Runtime;
+use crate::stronghold::Records;
 
 #[derive(Debug)]
 pub enum SnapshotStatus {
@@ -45,26 +46,29 @@ impl Snapshot {
     }
   }
 
-  pub fn vault<T>(&self, name: &T, flags: &[StrongholdFlags]) -> Vault
-  where
-    T: AsRef<[u8]> + ?Sized,
-  {
-    Vault {
-      flags: flags.to_vec(),
-      name: name.as_ref().to_vec(),
-      path: self.path.clone(),
-    }
+  pub fn path(&self) -> &Path {
+    &self.path
   }
 
-  pub fn store<T>(&self, name: &T, flags: &[StrongholdFlags]) -> Store
+  pub fn vault<T>(&self, name: &T, flags: &[StrongholdFlags]) -> Vault<'_>
   where
     T: AsRef<[u8]> + ?Sized,
   {
-    Store {
-      flags: flags.to_vec(),
-      name: name.as_ref().to_vec(),
-      path: self.path.clone(),
-    }
+    Vault::new(&self.path, name, flags)
+  }
+
+  pub fn store<T>(&self, name: &T, flags: &[StrongholdFlags]) -> Store<'_>
+  where
+    T: AsRef<[u8]> + ?Sized,
+  {
+    Store::new(&self.path, name, flags)
+  }
+
+  pub fn records<T>(&self, name: &T, flags: &[StrongholdFlags]) -> Records<'_>
+  where
+    T: AsRef<[u8]> + ?Sized,
+  {
+    Records::new(&self.path, name, flags)
   }
 
   pub async fn status(&self) -> SnapshotStatus {
