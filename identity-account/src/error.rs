@@ -20,6 +20,14 @@ pub enum Error {
   MissingStorageAdapter,
   PartialStorageEncryption,
   GenerateMnemonicError,
+  InvalidResourceNonce,
+  InvalidResourceTag,
+  InvalidResourceCiphertext,
+  // ArchiveLockPoisonedRead,
+  // ArchiveLockPoisonedWrite,
+  // IdentityLockPoisonedRead,
+  // IdentityLockPoisonedWrite,
+  // IdentityDuplicateDID,
 }
 
 impl From<identity_core::Error> for Error {
