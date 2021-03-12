@@ -63,7 +63,7 @@ impl DocumentDiff {
     /// Publishes the `DocumentDiff` to the Tangle using a default `Client`.
     pub async fn publish(&mut self, message_id: &MessageId) -> Result<()> {
         let network: Network = Network::from_name(self.did.network());
-        let client: Client = Client::from_network(network)?;
+        let client: Client = Client::from_network(network).await?;
 
         self.publish_with_client(&client, message_id).await
     }

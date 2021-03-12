@@ -13,7 +13,7 @@ use identity_core::{
     json,
 };
 use identity_iota::{
-    client::Client,
+    client::{Client, ClientBuilder},
     credential::{CredentialValidation, CredentialValidator},
     crypto::KeyPair,
     did::IotaDocument,
@@ -35,7 +35,10 @@ async fn document(client: &Client) -> Result<(IotaDocument, KeyPair)> {
 
     let transaction: _ = client.publish_document(&document).await?;
 
-    println!("DID Document Transaction > {}", client.transaction_url(&transaction));
+    println!(
+        "DID Document Transaction > {}",
+        client.transaction_url(&transaction.to_string())
+    );
     println!();
 
     Ok((document, keypair))
@@ -55,7 +58,9 @@ fn subject(subject: &DID) -> Result<CredentialSubject> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client: Client = Client::new()?;
+    // Create a new client connected to the Testnet (Chrysalis).
+    // Node-syncing has to be disabled for now.
+    let client: Client = ClientBuilder::new().node_sync_disabled().build().await?;
 
     let (doc_iss, key_iss): (IotaDocument, KeyPair) = document(&client).await?;
     let (doc_sub, _key_sub): (IotaDocument, KeyPair) = document(&client).await?;

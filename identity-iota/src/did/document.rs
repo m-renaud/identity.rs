@@ -345,7 +345,7 @@ impl IotaDocument {
     /// Publishes the `IotaDocument` to the Tangle using a default `Client`.
     pub async fn publish(&mut self) -> Result<()> {
         let network: Network = Network::from_name(self.id().network());
-        let client: Client = Client::from_network(network)?;
+        let client: Client = Client::from_network(network).await?;
 
         self.publish_with_client(&client).await
     }

@@ -13,13 +13,15 @@ use identity_iota::{
     crypto::KeyPair,
     did::{DocumentDiff, IotaDocument},
     error::Result,
-    tangle::MessageId,
 };
+use iota::MessageId;
 use std::{thread::sleep, time::Duration};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client: Client = ClientBuilder::new().network(Network::Comnet).build()?;
+    // Create a new client connected to the Testnet (Chrysalis).
+    // Node-syncing has to be disabled for now.
+    let client: Client = ClientBuilder::new().network(Network::Testnet).build().await?;
     let network: &str = client.network().as_str();
 
     // Keep track of the chain state locally, for reference

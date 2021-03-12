@@ -7,18 +7,19 @@ use crate::{
 };
 
 /// A `ClientBuilder` is used to generated a customized `Client`.
-#[derive(Clone, Debug)]
 pub struct ClientBuilder {
     pub(crate) network: Network,
     pub(crate) nodes: Vec<String>,
+    pub(crate) node_sync_enabled: bool,
 }
 
 impl ClientBuilder {
     /// Creates a new `ClientBuilder`.
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-            network: Network::Mainnet,
+            network: Network::default(),
             nodes: Vec::new(),
+            node_sync_enabled: true,
         }
     }
 
@@ -42,9 +43,14 @@ impl ClientBuilder {
         self
     }
 
+    pub fn node_sync_disabled(mut self) -> Self {
+        self.node_sync_enabled = false;
+        self
+    }
+
     /// Creates a new `Client` based on the `ClientBuilder` configuration.
-    pub fn build(self) -> Result<Client> {
-        Client::from_builder(self)
+    pub async fn build(self) -> Result<Client> {
+        Client::from_builder(self).await
     }
 }
 

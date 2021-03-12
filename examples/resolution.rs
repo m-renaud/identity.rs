@@ -5,7 +5,7 @@
 //! and retrieves information through DID Document resolution/dereferencing.
 use identity_core::resolver::{dereference, resolve, Dereference, Resolution};
 use identity_iota::{
-    client::Client,
+    client::{Client, ClientBuilder},
     crypto::KeyPair,
     did::{IotaDID, IotaDocument},
     error::Result,
@@ -13,7 +13,9 @@ use identity_iota::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client: Client = Client::new()?;
+    // Create a new client connected to the Testnet (Chrysalis).
+    // Node-syncing has to be disabled for now.
+    let client: Client = ClientBuilder::new().node_sync_disabled().build().await?;
 
     // Generate a new DID Document and public/private key pair.
     //

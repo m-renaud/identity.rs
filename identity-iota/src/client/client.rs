@@ -27,8 +27,12 @@ pub struct Client {
 
 impl Client {
     /// Creates a new `Client`  with default settings.
-    pub fn new() -> Result<Self> {
-        Self::from_builder(Self::builder())
+    pub async fn new() -> Result<Self> {
+        Self::from_builder(Self::builder()).await
+    }
+
+    pub fn client(&mut self) -> &mut iota::Client {
+        &mut self.client
     }
 
     /// Creates a `ClientBuilder` to configure a new `Client`.
@@ -39,29 +43,32 @@ impl Client {
     }
 
     /// Creates a new `Client` with default settings for the given `Network`.
-    pub fn from_network(network: Network) -> Result<Self> {
+    pub async fn from_network(network: Network) -> Result<Self> {
         Self::builder()
             .node(network.node_url().as_str())
             .network(network)
             .build()
+            .await
     }
 
     /// Creates a new `Client` based on the `ClientBuilder` configuration.
-    pub fn from_builder(builder: ClientBuilder) -> Result<Self> {
+    pub async fn from_builder(builder: ClientBuilder) -> Result<Self> {
         let mut client: iota::ClientBuilder = iota::ClientBuilder::new();
 
         if builder.nodes.is_empty() {
             client = client.with_node(builder.network.node_url().as_str())?;
         } else {
-            for node in builder.nodes {
-                client = client.with_node(&node)?;
-            }
+            let nodes: Vec<&str> = builder.nodes.iter().map(|node| node.as_str()).collect();
+            client = client.with_nodes(&nodes)?;
+        }
+        if builder.node_sync_enabled == false {
+            client = client.with_node_sync_disabled();
         }
 
         client = client.with_network(builder.network.as_str());
 
         Ok(Self {
-            client: client.finish()?,
+            client: client.finish().await?,
             network: builder.network,
         })
     }
@@ -97,13 +104,13 @@ impl Client {
 
         self.check_network(document.id())?;
 
-        let message: Message = self
+        let message_builder = self
             .client
-            .send()
+            .message()
             .with_index(document.id().tag())
-            .with_data(document.to_json()?.into_bytes())
-            .finish()
-            .await?;
+            .with_data(document.to_json()?.into_bytes());
+
+        let message = message_builder.finish().await?;
 
         Ok(message.id().0)
     }
@@ -119,7 +126,7 @@ impl Client {
 
         let message: Message = self
             .client
-            .send()
+            .message()
             .with_index(&IotaDocument::diff_address(message_id)?)
             .with_data(diff.to_json()?.into_bytes())
             .finish()
