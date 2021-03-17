@@ -50,14 +50,6 @@
 //! - [IOTA Identity Experience Team Website](https://iota-community.github.io/X-Team_IOTA_Identity/): Website of
 //!   aforementioned team.
 //!
-//! # Structure (Temporary)
-//!
-//! - Resources
-//!   - Docs Link (Website & User Guide)
-//!   - X-Team
-//! - Simple Example
-//! - Architecture/Overview
-//! - Get
 
 #![warn(
   rust_2018_idioms,
@@ -96,9 +88,7 @@ pub mod crypto {
 #[cfg(feature = "credential")]
 #[cfg_attr(docsrs, doc(cfg(feature = "credential")))]
 pub mod credential {
-  //! Verifiable Credentials
-  //!
-  //! [Specification](https://www.w3.org/TR/vc-data-model/)
+  //! Implementation of W3C's [Verifiable Credentials](https://www.w3.org/TR/vc-data-model/) specification
 
   pub use identity_credential::credential::*;
   pub use identity_credential::error::*;
@@ -108,9 +98,9 @@ pub mod credential {
 #[cfg(feature = "identifier")]
 #[cfg_attr(docsrs, doc(cfg(feature = "identifier")))]
 pub mod did {
-  //! Decentralized Identifiers
+  //! Implementation of W3C's [Decentralized Identifiers](https://www.w3.org/TR/did-core/) specification
   //!
-  //! [Specification](https://www.w3.org/TR/did-core/)
+  //! 
 
   pub use identity_did::document::*;
   pub use identity_did::error::*;
