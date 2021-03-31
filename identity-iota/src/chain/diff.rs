@@ -146,3 +146,90 @@ impl Default for DiffChain {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        chain::{AuthChain, DocumentChain},
+        crypto::KeyPair,
+        did::{DocumentDiff, IotaDocument},
+        tangle::TangleRef,
+    };
+    use identity_core::{
+        did_doc::{MethodBuilder, MethodData, MethodRef, MethodType},
+        proof::JcsEd25519Signature2020,
+    };
+    use iota::MessageId;
+
+    #[test]
+    fn test_diff_chain() {
+        let mut chain: DocumentChain;
+        let mut keys: Vec<KeyPair> = Vec::new();
+
+        // =========================================================================
+        // Create Initial Document
+        // =========================================================================
+
+        {
+            let (mut document, keypair): (IotaDocument, KeyPair) = IotaDocument::builder().build().unwrap();
+
+            document.sign(keypair.secret()).unwrap();
+            //document.publish_with_client(&client).await?;
+            document.set_message_id(MessageId::new([8; 32]));
+
+            chain = DocumentChain::new(AuthChain::new(document).unwrap());
+            keys.push(keypair);
+        }
+
+        // =========================================================================
+        // Push Auth Chain Update
+        // =========================================================================
+
+        {
+            let mut new: IotaDocument = chain.current().clone();
+            let keypair: KeyPair = JcsEd25519Signature2020::new_keypair();
+
+            let authentication: MethodRef = MethodBuilder::default()
+                .id(chain.id().join("#key-2").unwrap().into())
+                .controller(chain.id().clone().into())
+                .key_type(MethodType::Ed25519VerificationKey2018)
+                .key_data(MethodData::new_b58(keypair.public()))
+                .build()
+                .map(Into::into)
+                .unwrap();
+
+            unsafe {
+                new.as_document_mut().authentication_mut().clear();
+                new.as_document_mut().authentication_mut().append(authentication.into());
+            }
+
+            new.set_updated_now();
+            new.set_previous_message_id(chain.auth_message_id().clone());
+
+            chain.current().sign_data(&mut new, keys[0].secret()).unwrap();
+            //new.publish_with_client(&client).await?;
+
+            keys.push(keypair);
+            chain.try_push_auth(new).unwrap();
+        }
+
+        // =========================================================================
+        // Push Diff Chain Update
+        // =========================================================================
+
+        {
+            let new: IotaDocument = {
+                let mut this: IotaDocument = chain.current().clone();
+                this.properties_mut().insert("foo".into(), 123.into());
+                this.properties_mut().insert("bar".into(), 456.into());
+                this.set_updated_now();
+                this
+            };
+
+            let message_id: MessageId = chain.diff_message_id().clone();
+            let mut diff: DocumentDiff = chain.current().diff(&new, keys[1].secret(), message_id).unwrap();
+            diff.set_message_id(message_id);
+            assert!(chain.try_push_diff(diff).is_ok());
+        }
+    }
+}
