@@ -14,7 +14,6 @@ use identity_iota::{
     did::{DocumentDiff, IotaDocument},
     error::Result,
 };
-use iota::MessageId;
 use std::{thread::sleep, time::Duration};
 
 #[tokio::main]
@@ -96,7 +95,7 @@ async fn main() -> Result<()> {
             this
         };
 
-        let message_id: MessageId = chain.diff_message_id().clone();
+        let message_id = chain.diff_message_id().clone();
         let mut diff: DocumentDiff = chain.current().diff(&new, keys[1].secret(), message_id)?;
 
         diff.publish_with_client(&client, chain.auth_message_id()).await?;
@@ -153,7 +152,7 @@ async fn main() -> Result<()> {
             this
         };
 
-        let message_id: MessageId = chain.diff_message_id().clone();
+        let message_id = chain.diff_message_id().clone();
         let mut diff: DocumentDiff = chain.current().diff(&new, keys[1].secret(), message_id)?;
 
         diff.publish_with_client(&client, chain.auth_message_id()).await?;
